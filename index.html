@@ -1,15 +1,447 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <link href="style.css" rel="stylesheet" type="text/css" />
-    <title>first world</title>
-  </head>
-  <body>
-    <button onclick="magic(event)"><button_size>hello</button_size></button>
-    <k>hello world!!!</k>
-    <h2>hello world</h2>
-    <k>hello!!!</k>
-    <script src="script.js"></script>
-    </body>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>안전한 물놀이 수칙 방탈출</title>
+    
+    <style>
+        /* 기본 설정 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Helvetica Neue', sans-serif;
+            background-color: #333;
+        }
+
+        /* 게임 컨테이너 */
+        #game-container {
+            position: relative; /* 자식 요소의 위치 기준 */
+            width: 100vw;
+            height: 100vh;
+            display: none; /* 시작 시 숨김 */
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* 타이머 표시 스타일 */
+        #timer-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            z-index: 50; /* 방 이미지보다 위에, 모달보다는 아래에 위치 */
+            display: none; /* 게임 시작 전에는 숨김 */
+        }
+
+        /* 방 (배경 이미지) */
+        #room {
+            position: relative;
+            width: 1024px;
+            height: 682px;
+            background-image: url('image.jpg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* 클릭 가능한 오브젝트 공통 스타일 */
+        .interactive-object {
+            position: absolute;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        .interactive-object:hover {
+            background-color: rgba(255, 255, 0, 0.3);
+        }
+
+        /* 모달(팝업) 공통 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #start-modal {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 25px;
+            border: 1px solid #888;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        .close-btn {
+            background-color: #f44336;
+        }
+
+        /* 메모리 게임 스타일 */
+        #memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+            perspective: 1000px;
+        }
+
+        .card {
+            height: 80px;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+
+        .card.flipped, .card.matched {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 5px;
+            backface-visibility: hidden;
+            user-select: none;
+        }
+
+        .card-front {
+            background-color: #007bff;
+        }
+
+        .card-back {
+            background-color: #fff;
+            color: black;
+            font-size: 24px;
+            border: 2px solid #007bff;
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="start-modal" class="modal">
+        <div class="modal-content">
+            <h2>방탈출 게임: 안전한 물놀이</h2>
+            <p>시작하기 전, 학년, 반, 이름을 입력해주세요.</p>
+            <input type="number" id="player-grade" placeholder="학년 (숫자만)">
+            <input type="number" id="player-class" placeholder="반 (숫자만)">
+            <input type="text" id="player-name" placeholder="이름">
+            <button id="start-game-btn">게임 시작</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <!-- 타이머가 표시될 위치 -->
+        <div id="timer-display">소요 시간: 00:00</div>
+        
+        <div id="room">
+            <div class="interactive-object" id="monitor" style="top: 36%; left: 24.5%; width: 14%; height: 16%;"></div>
+            <div class="interactive-object" id="desk" style="top: 55%; left: 40%; width: 22%; height: 20%;"></div>
+            <div class="interactive-object" id="chalkboard" style="top: 25%; left: 52%; width: 28%; height: 22%;"></div>
+            <div class="interactive-object" id="clock" style="top: 10%; left: 85%; width: 8%; height: 13%;"></div>
+            <div class="interactive-object" id="book" style="top: 59%; left: 44%; width: 6%; height: 6%;"></div>
+            <div class="interactive-object" id="door" style="top: 22%; left: 8%; width: 10%; height: 45%;"></div>
+        </div>
+
+        <div id="quiz-modal" class="modal">
+            <div class="modal-content">
+                <h3 id="quiz-title"></h3>
+                <p id="quiz-question"></p>
+                <input type="text" id="quiz-answer" placeholder="정답을 입력하세요">
+                <button id="submit-quiz-answer">확인</button>
+                <button class="close-btn">닫기</button>
+            </div>
+        </div>
+
+        <div id="memory-game-modal" class="modal">
+            <div class="modal-content">
+                <h3>물놀이 안전수칙 기억력 게임</h3>
+                <p>같은 그림의 카드를 두 개씩 맞추세요!</p>
+                <div id="memory-grid"></div>
+                 <button class="close-btn">포기하고 닫기</button>
+            </div>
+        </div>
+
+        <div id="password-modal" class="modal">
+            <div class="modal-content">
+                <h3>교실 문을 열려면 비밀번호가 필요하다.</h3>
+                <input type="text" id="password-input" placeholder="비밀번호 4자리" maxlength="4">
+                <button id="submit-password">탈출하기</button>
+                <button class="close-btn">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const startModal = document.getElementById('start-modal');
+            const gameContainer = document.getElementById('game-container');
+            const startGameBtn = document.getElementById('start-game-btn');
+            const playerGradeInput = document.getElementById('player-grade');
+            const playerClassInput = document.getElementById('player-class');
+            const playerNameInput = document.getElementById('player-name');
+            const timerDisplay = document.getElementById('timer-display');
+
+            // --- 타이머 관련 변수 ---
+            let timerInterval;
+            let startTime;
+
+            // --- 타이머 관련 함수 ---
+            function startTimer() {
+                timerDisplay.style.display = 'block'; // 타이머 보이기
+                startTime = Date.now(); // 시작 시간 기록
+
+                timerInterval = setInterval(() => {
+                    const elapsedTime = Date.now() - startTime;
+                    const totalSeconds = Math.floor(elapsedTime / 1000);
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+
+                    const formattedMinutes = String(minutes).padStart(2, '0');
+                    const formattedSeconds = String(seconds).padStart(2, '0');
+                    
+                    timerDisplay.textContent = `소요 시간: ${formattedMinutes}:${formattedSeconds}`;
+                }, 1000);
+            }
+
+            // --- 시작 화면 로직 ---
+            startGameBtn.addEventListener('click', () => {
+                const grade = playerGradeInput.value.trim();
+                const className = playerClassInput.value.trim();
+                const name = playerNameInput.value.trim();
+
+                if (grade && className && name) {
+                    alert(`${grade}학년 ${className}반 ${name} 학생, 환영합니다!\n안전 수칙을 찾아 교실을 탈출하세요.`);
+                    startModal.style.display = 'none';
+                    gameContainer.style.display = 'flex';
+                    startTimer(); // <<<<<<<<<<<< 게임 시작과 동시에 타이머 시작
+                } else {
+                    alert('학년, 반, 이름을 모두 입력해야 시작할 수 있습니다.');
+                }
+            });
+
+
+            // --- 방탈출 게임 로직 ---
+            const objects = {
+                monitor: document.getElementById('monitor'),
+                desk: document.getElementById('desk'),
+                chalkboard: document.getElementById('chalkboard'),
+                clock: document.getElementById('clock'),
+                book: document.getElementById('book'),
+                door: document.getElementById('door')
+            };
+
+            const modals = {
+                quiz: document.getElementById('quiz-modal'),
+                memory: document.getElementById('memory-game-modal'),
+                password: document.getElementById('password-modal')
+            };
+
+            let gameState = {
+                unlockedDesk: false,
+                memoryGameCleared: false,
+                finalPasswordHint: ''
+            };
+            
+            objects.clock.addEventListener('click', () => {
+                alert("힌트: 칠판에 적힌 '국민안전처'는 언제 만들어졌을까? 그 해가 바로 비밀번호와 관련이 있어.");
+            });
+
+            objects.book.addEventListener('click', () => {
+                showQuiz('첫 번째 문제', '물놀이 전, 근육 경련 등을 예방하기 위해 꼭 해야 할 것은 무엇일까요? (5글자)', '준비운동', () => {
+                    alert('정답입니다! 책상 서랍이 열리는 소리가 들렸다.');
+                    gameState.unlockedDesk = true;
+                });
+            });
+            
+            objects.desk.addEventListener('click', () => {
+                if (gameState.unlockedDesk) {
+                    alert("책상 위에는 [수심이 깊은 곳]이라고 적힌 메모가 있다. 기억해두자.");
+                } else {
+                    alert('책상이 잠겨있다. 어딘가에 열쇠가 될 만한 문제가 있을 것 같다.');
+                }
+            });
+
+            objects.chalkboard.addEventListener('click', () => {
+                showQuiz('두 번째 문제', '물에 빠진 사람을 발견했을 때, 구조 경험이 없는 사람이 하면 안 되는 가장 위험한 행동은 무엇일까요? (7글자)', '직접 뛰어들기', () => {
+                    gameState.finalPasswordHint = '2015'; 
+                    alert(`정답입니다! 칠판 구석에서 '${gameState.finalPasswordHint}'라는 숫자를 발견했습니다!`);
+                });
+            });
+            
+            objects.monitor.addEventListener('click', () => {
+                modals.memory.style.display = 'flex';
+                startMemoryGame();
+            });
+
+            objects.door.addEventListener('click', () => {
+                if (gameState.memoryGameCleared && gameState.finalPasswordHint) {
+                    modals.password.style.display = 'flex';
+                } else {
+                    alert('아직 모든 수칙을 확인하지 못했다. 교실을 더 둘러보자.');
+                }
+            });
+
+            function showQuiz(title, question, answer, callback) {
+                modals.quiz.querySelector('#quiz-title').textContent = title;
+                modals.quiz.querySelector('#quiz-question').textContent = question;
+                modals.quiz.querySelector('#quiz-answer').value = '';
+                modals.quiz.style.display = 'flex';
+
+                modals.quiz.querySelector('#submit-quiz-answer').onclick = () => {
+                    const userAnswer = modals.quiz.querySelector('#quiz-answer').value.trim();
+                    if (userAnswer === answer) {
+                        callback();
+                        modals.quiz.style.display = 'none';
+                    } else {
+                        alert('틀렸습니다. 다시 생각해 보세요.');
+                    }
+                };
+            }
+
+            document.getElementById('submit-password').addEventListener('click', () => {
+                const inputPassword = document.getElementById('password-input').value;
+                if (inputPassword === '2015') {
+                    clearInterval(timerInterval); // <<<<<<<<<<<< 탈출 성공 시 타이머 정지
+                    const name = playerNameInput.value.trim();
+                    const finalTime = timerDisplay.textContent;
+                    alert(`정답입니다! ${name} 학생, 탈출 성공!\n${finalTime}\n\n여름철 안전한 물놀이 수칙을 항상 기억하세요!`);
+                    location.reload(); 
+                } else {
+                    alert('비밀번호가 틀렸습니다.');
+                }
+            });
+            
+            document.querySelectorAll('.close-btn').forEach(btn => {
+                btn.onclick = () => {
+                    btn.closest('.modal').style.display = 'none';
+                }
+            });
+
+            // --- 메모리 카드 게임 로직 ---
+            const memoryGrid = document.getElementById('memory-grid');
+            const cardSymbols = ['튜브', '조끼', '금지', '체조', '파도', '보호자'];
+            let cardArray;
+            let flippedCards = [];
+            let matchedPairs = 0;
+            let lockBoard = false;
+
+            function startMemoryGame() {
+                cardArray = [...cardSymbols, ...cardSymbols];
+                matchedPairs = 0;
+                flippedCards = [];
+                lockBoard = false;
+                shuffle(cardArray);
+                memoryGrid.innerHTML = '';
+
+                cardArray.forEach(symbol => {
+                    const card = document.createElement('div');
+                    card.classList.add('card');
+                    card.dataset.symbol = symbol;
+
+                    const cardFront = document.createElement('div');
+                    cardFront.classList.add('card-face', 'card-front');
+                    
+                    const cardBack = document.createElement('div');
+                    cardBack.classList.add('card-face', 'card-back');
+                    cardBack.textContent = symbol;
+
+                    card.appendChild(cardFront);
+                    card.appendChild(cardBack);
+                    
+                    card.addEventListener('click', flipCard);
+                    memoryGrid.appendChild(card);
+                });
+            }
+
+            function shuffle(array) {
+                array.sort(() => 0.5 - Math.random());
+            }
+
+            function flipCard(e) {
+                if (lockBoard) return;
+                const clickedCard = e.currentTarget;
+                if (clickedCard === flippedCards[0]) return;
+
+                clickedCard.classList.add('flipped');
+                flippedCards.push(clickedCard);
+
+                if (flippedCards.length === 2) {
+                    lockBoard = true;
+                    setTimeout(checkForMatch, 1000);
+                }
+            }
+
+            function checkForMatch() {
+                const [card1, card2] = flippedCards;
+                if (card1.dataset.symbol === card2.dataset.symbol) {
+                    card1.classList.add('matched');
+                    card2.classList.add('matched');
+                    matchedPairs++;
+                    if (matchedPairs === cardSymbols.length) {
+                        setTimeout(() => {
+                            alert('게임 클리어! 모니터 화면이 밝아지며 모든 것을 해결했다는 느낌이 든다.');
+                            gameState.memoryGameCleared = true;
+                            modals.memory.style.display = 'none';
+                        }, 500);
+                    }
+                } else {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                }
+                flippedCards = [];
+                lockBoard = false;
+            }
+        });
+    </script>
+</body>
 </html>
