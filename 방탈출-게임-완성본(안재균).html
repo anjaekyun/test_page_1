@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안전 교육 방탈출: 퀴즈 챌린지(안재균)</title>
+    
+    <style>
+        /* --- 기본 스타일 --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: #f1c40f; margin-bottom: 5px; }
+
+        /* --- 게임 컨테이너 --- */
+        #game-container {
+            width: 800px;
+            height: 600px;
+            background-color: #f0f0f0;
+            border: 5px solid #fff;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #timer-display {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5em;
+            color: #f1c40f;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            z-index: 50;
+        }
+        .stage {
+            width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0;
+        }
+        .hidden { display: none !important; }
+
+        /* --- 배경 이미지 --- */
+        #stage-1 { background: url('https://raw.githubusercontent.com/anjaekyun/test_page_1/refs/heads/main/Whisk_48f2b2b76e%20(1).jpg') center/cover no-repeat; }
+        #stage-2 { background: url('https://raw.githubusercontent.com/anjaekyun/test_page_1/refs/heads/main/Whisk_cad14196fc.jpg') center/cover no-repeat; }
+        #stage-3 { background: url('https://raw.githubusercontent.com/anjaekyun/test_page_1/refs/heads/main/Whisk_f37f781122.jpg') center/cover no-repeat; }
+        /* --- 오브젝트 스타일 --- */
+        .object {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 3px dashed rgba(255, 255, 0, 0.0);
+        }
+        .object:hover {
+            background-color: rgba(255, 255, 0, 0.4);
+            border: 3px dashed rgba(255, 255, 0, 0.9);
+            border-radius: 10px;
+        }
+        .door { border: 5px solid #e74c3c; }
+
+        /* --- UI 패널 --- */
+        .panel {
+            width: 800px;
+            margin: 5px auto;
+            padding: 15px;
+            background-color: #4a4a4a;
+            border-radius: 5px;
+            border: 2px solid #fff;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+        }
+        #clue-panel { background-color: #34495e; font-weight: bold; }
+        #clue-display { margin-left: 10px; color: #f1c40f; letter-spacing: 5px; }
+
+        /* --- 모달 --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            width: 500px;
+            text-align: center;
+        }
+        .modal-content h2 { margin-top: 0; }
+        .modal-input {
+            display: block; width: 90%;
+            padding: 10px; margin: 10px auto;
+            font-size: 1em; border: 1px solid #ccc; border-radius: 5px;
+        }
+        .modal-btn {
+            padding: 10px 20px; font-size: 1em;
+            color: white; border: none; border-radius: 5px;
+            margin-top: 15px; cursor: pointer;
+        }
+        #game-start-btn { background-color: #2ecc71; }
+        #game-start-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        #password-submit-btn { background-color: #2ecc71; }
+        .answer-btn {
+            display: block; width: 100%; padding: 15px; margin-top: 10px;
+            font-size: 1em; cursor: pointer; border: 2px solid #3498db;
+            background-color: white; color: #3498db; border-radius: 5px;
+        }
+        .answer-btn:hover { background-color: #3498db; color: white; }
+
+        /* --- ✨ 여기가 수정된 부분입니다! (탈출 성공 화면 스타일) --- */
+        #game-clear { 
+            background: #2c3e50; 
+            display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; 
+        }
+        #game-clear h2 { font-size: 3em; color: #2ecc71; margin-bottom: 15px; }
+        #game-clear p { font-size: 1.2em; line-height: 1.6; margin: 5px 0; }
+        #game-clear p span { color: #f1c40f; font-weight: bold; }
+        .result-pass {
+            font-size: 1.8em !important;
+            color: #3498db;
+            font-weight: bold;
+            border: 2px solid #3498db;
+            padding: 10px 20px;
+            margin: 20px 0 !important;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .result-time {
+            font-size: 1.5em !important;
+        }
+        #game-clear button {
+            margin-top: 25px; padding: 15px 30px; font-size: 1.2em;
+            cursor: pointer; background-color: #f1c40f; color: #333;
+            border: none; border-radius: 5px; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>안전 교육 방탈출: 퀴즈 챌린지</h1>
+
+    <div id="message-box" class="panel hidden">게임을 시작합니다. 주변 사물을 클릭해 단서를 얻고 탈출하세요!</div>
+    <div id="clue-panel" class="panel hidden">획득한 단서: <span id="clue-display"></span></div>
+
+    <div id="game-container" class="hidden">
+        <div id="timer-display" class="hidden">00:00</div>
+        
+        <!-- 스테이지 1, 2, 3 HTML은 이전과 동일 -->
+        <div id="stage-1" class="stage">
+            <div id="s1-desk" class="object" style="top: 65%; left: 50%; width: 30%; height: 25%;"></div>
+            <div id="s1-locker" class="object" style="top: 20%; left: 6%; width: 20%; height: 60%;"></div>
+            <div id="s1-monitor" class="object" style="top: 49%; left: 57%; width: 16%; height: 15%;"></div>
+            <div id="s1-window" class="object" style="top: 7%; left: 80%; width: 15%; height: 60%;"></div>
+            <div id="s1-door" class="object door" style="top: 15%; left: 24%; width: 20%; height: 70%;"></div>
+        </div>
+        <div id="stage-2" class="stage hidden">
+            <div id="s2-chair" class="object" style="top: 60%; left: 10%; width: 15%; height: 30%;"></div>
+            <div id="s2-piano" class="object" style="top: 55%; left: 50%; width: 50%; height: 40%;"></div>
+            <div id="s2-trashcan" class="object" style="top: 73%; left: 0.5%; width: 8%; height: 20%;"></div>
+            <div id="s2-stage" class="object" style="top: 15%; left: 7%; width: 40%; height: 34%;"></div>
+            <div id="s2-door" class="object door" style="top: 37%; left: 49%; width: 12%; height: 22%;"></div>
+        </div>
+        <div id="stage-3" class="stage hidden">
+            <div id="s3-drawer" class="object" style="top: 65%; left: 25%; width: 25%; height: 29%;"></div>
+            <div id="s3-box" class="object" style="top: 60%; left: 78%; width: 20%; height: 20%;"></div>
+            <div id="s3-monitor" class="object" style="top: 46%; left: 55%; width: 15%; height: 15%;"></div>
+            <div id="s3-papers" class="object" style="top: 80%; left: 4%; width: 14%; height: 15%;"></div>
+            <div id="s3-door" class="object door" style="top: 17%; left: 5%; width: 20%; height: 60%;"></div>
+        </div>
+        
+        <!-- ✨ 여기가 수정된 부분입니다! (HTML 구조 변경) -->
+        <div id="game-clear" class="stage hidden">
+            <h2>미션 클리어!</h2>
+            <p><span id="final-user-info"></span> 학생, 멋지게 탈출에 성공했습니다!</p>
+            <p class="result-pass">결과: 통과</p>
+            <p class="result-time">소요 시간: <span id="final-time"></span></p>
+            <button onclick="location.reload()">처음으로</button>
+        </div>
+    </div>
+
+    <!-- 사용자 정보 입력 모달 -->
+    <div id="user-info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>게임 시작 전 정보를 입력해주세요</h2>
+            <input type="text" id="user-grade" class="modal-input" placeholder="학년 (예: 5)">
+            <input type="text" id="user-class" class="modal-input" placeholder="반 (예: 3)">
+            <input type="text" id="user-name" class="modal-input" placeholder="이름 (예: 홍길동)">
+            <button id="game-start-btn" class="modal-btn" disabled>게임 시작</button>
+        </div>
+    </div>
+
+    <!-- 퀴즈 모달 -->
+    <div id="quiz-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="quiz-question"></h2>
+            <div id="quiz-answers"></div>
+        </div>
+    </div>
+
+    <!-- 비밀번호 모달 -->
+    <div id="password-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>비밀번호를 입력하세요</h2>
+            <input type="text" id="password-input" placeholder="획득한 단서를 조합하세요">
+            <button id="password-submit-btn" class="modal-btn">탈출 시도</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 게임 데이터 (이전과 동일) ---
+            const stageData = {
+                1: { password: "4815", cluesNeeded: 4, quizzes: { "s1-desk": { q: "지진 발생 시 가장 먼저 숨어야 할 곳은?", a: ["창문 옆", "튼튼한 책상 아래", "문 옆"], correct: 1, clue: "4", solved: false }, "s1-locker": { q: "지진 중 사물함 옆은 왜 위험할까?", a: ["넘어질 수 있어서", "색이 마음에 안 들어서", "먼지가 많아서"], correct: 0, clue: "8", solved: false }, "s1-monitor": { q: "지진으로 정전 시 올바른 행동은?", a: ["소리 지르기", "성냥불 켜기", "함부로 움직이지 않기"], correct: 2, clue: "1", solved: false }, "s1-window": { q: "지진 대피 시 창문과 거리를 둬야 하는 이유는?", a: ["유리가 깨져 다칠 수 있어서", "밖이 시끄러워서", "바람이 들어와서"], correct: 0, clue: "5", solved: false }}},
+                2: { password: "계단조심", cluesNeeded: 4, quizzes: { "s2-chair": { q: "지진 대피 시 넘어진 의자가 많은 복도를 지날 때 올바른 행동은?", a: ["빨리 뛰어간다", "발밑을 살피며 조심히 이동", "눈을 감고 간다"], correct: 1, clue: "계", solved: false }, "s2-piano": { q: "강당의 피아노처럼 크고 무거운 물건은 왜 피해야 할까?", a: ["넘어지거나 미끄러져 다칠 수 있어서", "소리가 시끄러워서", "자리를 많이 차지해서"], correct: 0, clue: "단", solved: false }, "s2-trashcan": { q: "지진 대피 중 가방으로 머리를 보호하는 이유는?", a: ["멋있어 보이려고", "낙하물로부터 머리 보호", "가방을 자랑하려고"], correct: 1, clue: "조", solved: false }, "s2-stage": { q: "무대 위 조명이 흔들릴 때 올바른 행동은?", a: ["무대 위로 올라가 구경한다", "조명 아래를 피해서 이동한다", "조명을 손으로 잡는다"], correct: 1, clue: "심", solved: false }}},
+                3: { password: "119신고", cluesNeeded: 4, quizzes: { "s3-drawer": { q: "화재 시 연기를 마시지 않으려면?", a: ["숨을 참는다", "젖은 수건으로 코와 입을 막는다", "크게 소리 지른다"], correct: 1, clue: "1", solved: false }, "s3-box": { q: "소화기 안전핀을 뽑은 다음 행동은?", a: ["바람을 등지고 호스를 불쪽으로 향한다", "바람을 마주보고 호스를 천장으로 향한다", "소화기를 던진다"], correct: 0, clue: "1", solved: false }, "s3-monitor": { q: "전기 화재 시 절대 사용하면 안 되는 것은?", a: ["소화기", "모래", "물"], correct: 2, clue: "9", solved: false }, "s3-papers": { q: "몸에 불이 붙었을 때 올바른 행동은?", a: ["바람을 향해 뛴다", "멈춰서 얼굴을 가리고 바닥에 구른다", "가만히 서 있는다"], correct: 1, clue: "신고", solved: false }}}
+            };
+
+            // --- 게임 상태 및 사용자 정보 변수 (이전과 동일) ---
+            let currentStage = 1;
+            let collectedClues = [];
+            let userInfo = { grade: '', class: '', name: '' };
+            let timerInterval;
+            let startTime;
+
+            // --- DOM 요소 (이전과 동일) ---
+            const gameUI = [document.getElementById('game-container'), document.getElementById('message-box'), document.getElementById('clue-panel')];
+            const clueDisplay = document.getElementById('clue-display');
+            const quizModal = document.getElementById('quiz-modal');
+            const passwordModal = document.getElementById('password-modal');
+            const passwordInput = document.getElementById('password-input');
+            const userInfoModal = document.getElementById('user-info-modal');
+            const gameStartBtn = document.getElementById('game-start-btn');
+            const timerDisplay = document.getElementById('timer-display');
+            
+            // --- 함수 (이전과 동일) ---
+            function showMessage(msg) { document.getElementById('message-box').textContent = msg; }
+            function updateClueDisplay() { clueDisplay.textContent = collectedClues.join(' '); }
+            function startTimer() { startTime = new Date(); timerInterval = setInterval(() => { const now = new Date(); const elapsed = Math.floor((now - startTime) / 1000); const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0'); const seconds = String(elapsed % 60).padStart(2, '0'); timerDisplay.textContent = `${minutes}:${seconds}`; }, 1000); }
+            function stopTimer() { clearInterval(timerInterval); return timerDisplay.textContent; }
+            function showQuiz(quiz) { document.getElementById('quiz-question').textContent = quiz.q; const answersContainer = document.getElementById('quiz-answers'); answersContainer.innerHTML = ''; quiz.a.forEach((answer, index) => { const btn = document.createElement('button'); btn.className = 'answer-btn'; btn.textContent = answer; btn.onclick = () => handleAnswer(quiz, index); answersContainer.appendChild(btn); }); quizModal.classList.remove('hidden'); }
+            function handleAnswer(quiz, selectedIndex) { if (selectedIndex === quiz.correct) { showMessage(`정답! 단서 [${quiz.clue}] (을)를 획득했다!`); collectedClues.push(quiz.clue); quiz.solved = true; updateClueDisplay(); } else { showMessage("오답이다. 다시 생각해 보자."); } quizModal.classList.add('hidden'); }
+            function changeStage(stageNum) { document.getElementById(`stage-${currentStage}`).classList.add('hidden'); document.getElementById(`stage-${stageNum}`).classList.remove('hidden'); currentStage = stageNum; collectedClues = []; updateClueDisplay(); showMessage(`스테이지 ${stageNum} 도착! 이곳의 단서를 찾아 탈출하자.`); }
+
+            // --- 이벤트 리스너 (이전과 동일) ---
+            userInfoModal.addEventListener('input', () => { const grade = document.getElementById('user-grade').value.trim(); const uClass = document.getElementById('user-class').value.trim(); const name = document.getElementById('user-name').value.trim(); gameStartBtn.disabled = !(grade && uClass && name); });
+            gameStartBtn.onclick = () => { userInfo.grade = document.getElementById('user-grade').value; userInfo.class = document.getElementById('user-class').value; userInfo.name = document.getElementById('user-name').value; userInfoModal.classList.add('hidden'); gameUI.forEach(el => el.classList.remove('hidden')); timerDisplay.classList.remove('hidden'); startTimer(); };
+            document.getElementById('game-container').addEventListener('click', (e) => { const target = e.target.closest('.object'); if (!target) return; const stageInfo = stageData[currentStage]; const quiz = stageInfo.quizzes[target.id]; if (target.classList.contains('door')) { if (collectedClues.length >= stageInfo.cluesNeeded) { passwordModal.classList.remove('hidden'); } else { showMessage(`아직 단서가 부족하다. ${stageInfo.cluesNeeded - collectedClues.length}개의 단서가 더 필요해.`); } } else if (quiz) { if (quiz.solved) { showMessage("이곳은 이미 확인했다."); } else { showQuiz(quiz); } } });
+
+            // ✨ 여기가 수정된 부분입니다! (JavaScript 로직 변경)
+            document.getElementById('password-submit-btn').onclick = () => {
+                const stageInfo = stageData[currentStage];
+                const userInput = passwordInput.value.trim().replace(/\s/g, '');
+                const correctPassword = stageInfo.password;
+                let isCorrect = false;
+
+                if (currentStage === 1 || currentStage === 2) {
+                    const sortedUserInput = userInput.split('').sort().join('');
+                    const sortedCorrectPassword = correctPassword.split('').sort().join('');
+                    if (sortedUserInput === sortedCorrectPassword) isCorrect = true;
+                } else {
+                    if (userInput === correctPassword) isCorrect = true;
+                }
+
+                if (isCorrect) {
+                    passwordModal.classList.add('hidden');
+                    passwordInput.value = '';
+                    if (currentStage < 3) {
+                        showMessage("정답! 문이 열렸다!");
+                        setTimeout(() => changeStage(currentStage + 1), 1500);
+                    } else {
+                        const finalTime = stopTimer();
+                        showMessage("모든 관문을 통과했다! 탈출 성공!");
+                        
+                        // 수정된 최종 화면에 정보 채우기
+                        document.getElementById('final-user-info').textContent = `${userInfo.grade}학년 ${userInfo.class}반 ${userInfo.name}`;
+                        document.getElementById('final-time').textContent = finalTime;
+
+                        setTimeout(() => {
+                            gameUI.forEach(el => el.classList.add('hidden'));
+                            timerDisplay.classList.add('hidden');
+                            document.getElementById('game-clear').classList.remove('hidden');
+                        }, 1500);
+                    }
+                } else {
+                    showMessage("비밀번호가 틀렸다. 다시 조합해 보자.");
+                    passwordModal.classList.add('hidden');
+                }
+            };
+        });
+    </script>
+</body>
+</html>
